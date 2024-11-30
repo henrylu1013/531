@@ -1,0 +1,46 @@
+{
+  "schema_name": "Sample Schema",
+  "description": "This schema defines the structure of a clustered customer dataset.",
+  "columns": [
+    {
+      "column_name": "CUSTOMER_NAME",
+      "data_type": "VARCHAR",
+      "description": "An identifier that best describes the customers name."
+      },
+    {
+      "column_name": "YEAR",
+      "data_type": "NUMBER",
+      "description": "The year associated with the record."
+        },
+    {
+      "column_name": "QUARTER",
+      "data_type": "VARCHAR",
+      "description": "The Quarter of the year, best describes as Q1,Q2,Q3,Q4."
+    },
+    {
+      "column_name": "TOTAL_ORDER_AMOUNT",
+      "data_type": "FLOAT",
+      "description": "The amount of total sales the customer order for the quarter."
+          },
+    {
+      "column_name": "AVERAGE_ORDER_AMOUNT",
+      "data_type": "FLOAT",
+      "description": "The average amount of sales the customer order for the quarter."
+    },
+{
+      "column_name": "ORDER_FREQUENCY",
+      "data_type": "NUMBER",
+      "description": "The quantity amount the customer order for the quarter."
+    },
+{
+      "column_name": "Categorized",
+      "data_type": "NUMBER",
+      "description": "Best to describe the customer for the quarter.",
+         "data_mapping": {
+    "0": "BELOW ORDER FREQUENCY",
+    "1": "AVERAGE ORDER FREQUENCY WITH AVERAGE SALES",
+    "2": "HIGH SALES WITH HIGH ORDER FREQUENCY"
+  }
+    }
+  ]
+}

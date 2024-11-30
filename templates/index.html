@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BI Chatbot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/sql.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/json.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <div class="app-container">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <h2><i class="fas fa-robot"></i> BI Chatbot</h2>
+                </div>
+                <div class="chat-messages" ref="messageContainer">
+                    <div v-for="(message, index) in messages" 
+                         :key="index" 
+                         :class="['message', message.type]">
+                        <div class="message-content">
+                            <div class="message-text" v-html="formatMessage(message.content)"></div>
+                            <div class="message-time" v-text="message.time"></div>
+                        </div>
+                    </div>
+                    <div v-if="isLoading" class="message ai">
+                        <div class="message-content">
+                            <div class="typing-indicator">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <textarea 
+                        v-model="newMessage" 
+                        @keydown.enter.prevent="handleEnterPress"
+                        placeholder="Type a message..."
+                        rows="1"
+                        ref="messageInput"
+                    ></textarea>
+                    <button @click="sendMessage" :disabled="!newMessage.trim() || isLoading">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="query-panel" v-if="currentQueryInfo">
+                <div class="query-panel-header">
+                    <h3>Query Details</h3>
+                </div>
+                <div class="query-panel-content">
+                    <div v-html="formatQueryInfo(currentQueryInfo)"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue
+
+        const app = createApp({
+            data() {
+                return {
+                    messages: [],
+                    newMessage: '',
+                    isLoading: false,
+                    currentQueryInfo: null
+                }
+            },
+            methods: {
+                async loadChatHistory() {
+                    try {
+                        const response = await fetch('/history');
+                        const data = await response.json();
+                        
+                        console.log('Raw history data:', data);
+                        
+                        if (!data || !Array.isArray(data)) {
+                            console.error('Invalid history data received:', data);
+                            this.messages = [];
+                            return;
+                        }
+                        
+                        this.messages = data.map(msg => {
+                            console.log('Processing message:', msg);
+                            return {
+                                content: msg.content,
+                                type: msg.is_user ? 'user' : 'ai',
+                                time: new Date(msg.timestamp).toLocaleTimeString([], { 
+                                    hour: '2-digit', 
+                                    minute: '2-digit' 
+                                })
+                            };
+                        });
+
+                        const lastAiMessage = [...data]
+                            .reverse()
+                            .find(msg => !msg.is_user && msg.query_info);
+                        
+                        if (lastAiMessage) {
+                            this.currentQueryInfo = lastAiMessage.query_info;
+                            this.$nextTick(() => {
+                                this.highlightCode();
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Error loading chat history:', error);
+                        this.messages = [];
+                    }
+                },
+                async sendMessage() {
+                    if (!this.newMessage.trim()) return;
+                    
+                    const userMessage = this.newMessage.trim();
+                    this.newMessage = '';
+                    
+                    this.messages.push({
+                        content: userMessage,
+                        type: 'user',
+                        time: new Date().toLocaleTimeString([], { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        })
+                    });
+
+                    this.isLoading = true;
+
+                    try {
+                        const response = await fetch('/chat', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ message: userMessage })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        this.messages.push({
+                            content: data.response,
+                            type: 'ai',
+                            time: new Date().toLocaleTimeString([], { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                            })
+                        });
+
+                        this.currentQueryInfo = data.query_info;
+                        this.highlightCode();
+                    } catch (error) {
+                        console.error('Error:', error);
+                        this.messages.push({
+                            content: 'An error occurred while processing your message.',
+                            type: 'error',
+                            time: new Date().toLocaleTimeString([], { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                            })
+                        });
+                    } finally {
+                        this.isLoading = false;
+                        this.$nextTick(() => {
+                            this.scrollToBottom();
+                        });
+                    }
+                },
+                scrollToBottom() {
+                    const container = document.querySelector('.chat-messages');
+                    container.scrollTop = container.scrollHeight;
+                },
+                handleEnterPress(e) {
+                    if (e.shiftKey) {
+                        return;
+                    }
+                    e.preventDefault();
+                    this.sendMessage();
+                },
+                formatMessage(content) {
+                    if (!content) return '';
+                    return content
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#039;')
+                        .replace(/\n/g, '<br>');
+                },
+                formatQueryInfo(info) {
+                    if (!info) return '';
+                    
+                    const parts = info.split('SQL Query Used:');
+                    if (parts.length !== 2) return info;
+
+                    const results = parts[0];
+                    const query = parts[1]; 
+
+                    const formattedQuery = `
+                        <div class="query-section">
+                            <h4>SQL Query Used:</h4>
+                            <pre><code class="language-sql">${query.trim()}</code></pre>
+                        </div>`;
+                    
+                    const formattedResults = `
+                        <div class="query-section">
+                            <h4>Query Results:</h4>
+                            <pre><code class="language-json">${results.replace('Query Results:', '').trim()}</code></pre>
+                        </div>`;
+                    
+                    return formattedQuery + formattedResults;
+                },
+                highlightCode() {
+                    this.$nextTick(() => {
+                        document.querySelectorAll('pre code').forEach((block) => {
+                            hljs.highlightBlock(block);
+                        });
+                    });
+                }
+            },
+            async mounted() {
+                await this.loadChatHistory();
+            },
+            created() {
+                console.log('Component created');
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') {
+                        this.loadChatHistory();
+                    }
+                });
+            },
+            unmounted() {
+                document.removeEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') {
+                        this.loadChatHistory();
+                    }
+                });
+            }
+        });
+
+        app.mount('#app')
+    </script>
+</body>
+</html>

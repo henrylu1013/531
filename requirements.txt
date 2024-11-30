@@ -1,0 +1,10 @@
+flask
+langchain
+langchain-anthropic
+anthropic
+python-dotenv
+psycopg2-binary
+SQLAlchemy
+Flask-SQLAlchemy
+Flask-Migrate
+pandas 

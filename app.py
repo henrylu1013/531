@@ -46,7 +46,7 @@ try:
     # Initialize the ChatAnthropic instance
     chat = ChatAnthropic(
         temperature=0.7,
-        model="claude-3-opus-20240229"  # or use another Claude model
+        model="claude-3-sonnet-20240229"
     )
 except Exception as e:
     print(f"Error initializing ChatAnthropic: {str(e)}")
@@ -81,9 +81,55 @@ def chat_endpoint():
         
         print(f"Received message: {user_message}")  # Debug log
         
-        # Load schema and create context for Claude
-        schema = load_schema()
-        context = f"""I have a customer database with the following schema:
+        # Check if this is a follow-up question
+        is_followup = user_message.lower().startswith('follow up:')
+        if is_followup:
+            # Remove the "follow up:" prefix
+            user_message = user_message[len('follow up:'):].strip()
+            # Get the last AI message and user message from the database
+            last_ai_message = ChatMessage.query.filter_by(is_user=False).order_by(ChatMessage.timestamp.desc()).first()
+            last_user_message = ChatMessage.query.filter_by(is_user=True).order_by(ChatMessage.timestamp.desc()).offset(1).first()
+            
+            if last_ai_message and last_ai_message.query_info and last_user_message:
+                context = f"""Previous interaction:
+Previous question: {last_user_message.content}
+Previous response: {last_ai_message.content}
+Previous query details: {last_ai_message.query_info}
+
+User follow-up question: {user_message}
+
+Answer the follow-up question based on the previous interaction. Answer in the perspective of a sales analyst. Don't say that you're an analyst."""
+            else:
+                context = f"User follow-up question (no previous context available): {user_message}"
+
+            # Save user message to database
+            db_user_message = ChatMessage(content=user_message, is_user=True)
+            db.session.add(db_user_message)
+            db.session.commit()
+
+            # Get response from Claude for follow-up
+            messages = [HumanMessage(content=context)]
+            response = chat.invoke(messages)
+            ai_response = response.content
+
+            # Save AI response to database with previous query info
+            db_ai_message = ChatMessage(
+                content=ai_response,
+                is_user=False,
+                query_info=last_ai_message.query_info if last_ai_message else None
+            )
+            db.session.add(db_ai_message)
+            db.session.commit()
+
+            return jsonify({
+                'response': ai_response,
+                'query_info': last_ai_message.query_info if last_ai_message else None
+            })
+
+        else:
+            # Original SQL query handling code
+            schema = load_schema()
+            context = f"""I have a customer database with the following schema:
 {json.dumps(schema, indent=2)}
 
 When generating SQL queries:
@@ -96,85 +142,85 @@ For example, if searching for a customer named "westmount", the WHERE clause sho
 WHERE LOWER(customer_name) LIKE LOWER('%westmount%')
 
 User question: {user_message}"""
-        
-        # Save user message to database
-        db_user_message = ChatMessage(content=user_message, is_user=True)
-        db.session.add(db_user_message)
-        db.session.commit()
-        
-        # Get the response from Claude
-        messages = [HumanMessage(content=context)]
-        response = chat.invoke(messages)
-        logger.info(f"""
+
+            # Save user message to database
+            db_user_message = ChatMessage(content=user_message, is_user=True)
+            db.session.add(db_user_message)
+            db.session.commit()
+            
+            # Get the response from Claude
+            messages = [HumanMessage(content=context)]
+            response = chat.invoke(messages)
+            logger.info(f"""
 API Call Log:
 User Message: {user_message}
 Context Sent: {context}
 API Response: {response.content}
 {'='*50}""")
-        
-        ai_response = response.content
-        try:
-            # Extract SQL query using regex - looks for content between SELECT and semicolon
-            if "SELECT" in ai_response.upper():
-                sql_match = re.search(r'(SELECT.*?;)', ai_response, re.IGNORECASE | re.DOTALL)
-                if sql_match:
-                    sql_query = sql_match.group(1)
-                    with db.engine.connect() as connection:
-                        result = connection.execute(text(sql_query))
-                        # Get column names from result
-                        columns = result.keys()
-                        # Convert results to list of dicts
-                        query_result = [
-                            {col: value for col, value in zip(columns, row)}
-                            for row in result.fetchall()
-                        ]
-                        
-                        logger.info(f"Query executed successfully. Results: {query_result}")
-                        
-                        followup_context = f"""Based on the user's question: "{user_message}"
-                        
+            
+            ai_response = response.content
+            try:
+                # Extract SQL query using regex - looks for content between SELECT and semicolon
+                if "SELECT" in ai_response.upper():
+                    sql_match = re.search(r'(SELECT.*?;)', ai_response, re.IGNORECASE | re.DOTALL)
+                    if sql_match:
+                        sql_query = sql_match.group(1)
+                        with db.engine.connect() as connection:
+                            result = connection.execute(text(sql_query))
+                            # Get column names from result
+                            columns = result.keys()
+                            # Convert results to list of dicts
+                            query_result = [
+                                {col: value for col, value in zip(columns, row)}
+                                for row in result.fetchall()
+                            ]
+                            
+                            logger.info(f"Query executed successfully. Results: {query_result}")
+                            
+                            followup_context = f"""Based on the user's question: "{user_message}"
+                            
 Here are the query results:
 {json.dumps(query_result, indent=2)}
 
-Please provide a natural language analysis of these results."""
+Please provide a natural language analysis of these results. Answer in the perspective of a sales analyst. Don't say that you're an analyst."""
 
-                        # Send follow-up request to Claude
-                        followup_messages = [HumanMessage(content=followup_context)]
-                        followup_response = chat.invoke(followup_messages)
-                        
-                        # Log the follow-up interaction
-                        logger.info(f"""
+                            # Send follow-up request to Claude
+                            followup_messages = [HumanMessage(content=followup_context)]
+                            followup_response = chat.invoke(followup_messages)
+                            
+                            # Log the follow-up interaction
+                            logger.info(f"""
 Follow-up API Call Log:
 Context: {followup_context}
 API Response: {followup_response.content}
 {'='*50}""")
-                        
-                        # Prepare the final response
-                        analysis = followup_response.content
-                        query_info = f"""Query Results:
+                            
+                            # Prepare the final response
+                            analysis = followup_response.content
+                            query_info = f"""Query Results:
 {json.dumps(query_result, indent=2)}
 
 SQL Query Used:
 {sql_query}"""
-                        
-                        # Save AI response to database
-                        db_ai_message = ChatMessage(
-                            content=analysis,
-                            is_user=False,
-                            query_info=query_info
-                        )
-                        db.session.add(db_ai_message)
-                        db.session.commit()
-                        
-                        return jsonify({'response': analysis, 'query_info': query_info})
-        except Exception as e:
-            error_msg = f"\n\nError executing query: {str(e)}"
-            logger.error(f"""
+                            
+                            # Save AI response to database
+                            db_ai_message = ChatMessage(
+                                content=analysis,
+                                is_user=False,
+                                query_info=query_info
+                            )
+                            db.session.add(db_ai_message)
+                            db.session.commit()
+                            
+                            return jsonify({'response': analysis, 'query_info': query_info})
+            except Exception as e:
+                error_msg = f"\n\nError executing query: {str(e)}"
+                logger.error(f"""
 Error Log:
 {error_msg}
 {'='*50}""")
-            ai_response += error_msg
-            return jsonify({'response': ai_response})
+                ai_response += error_msg
+                return jsonify({'response': ai_response})
     except Exception as e:
         print(f"Error in chat endpoint: {str(e)}")
         traceback.print_exc()

@@ -7,6 +7,33 @@
       "data_type": "VARCHAR",
       "description": "An identifier that best describes the customers name."
       },
+      {
+        "column_name": "CUSTOMER_CITY",
+        "data_type": "VARCHAR",
+        "description": "An identifier that best describes the customers name."
+        },
+
+          {
+          "column_name": "CUSTOMER_CITY",
+          "data_type": "VARCHAR",
+          "description": "The city in which the customer resides or operates."
+        },
+        {
+          "column_name": "CUSTOMER_COUNTRY",
+          "data_type": "VARCHAR",
+          "description": "The country in which the customer resides or operates."
+        },
+        {
+          "column_name": "CUSTOMER_MEMBER_TYPE",
+          "data_type": "VARCHAR",
+          "description": "The membership type or category of the customer."
+        },
+        {
+          "column_name": "CUSTOMER_STATE",
+          "data_type": "VARCHAR",
+          "description": "The state or province in which the customer resides or operates."
+        },
+      
     {
       "column_name": "YEAR",
       "data_type": "NUMBER",
@@ -15,7 +42,7 @@
     {
       "column_name": "QUARTER",
       "data_type": "VARCHAR",
-      "description": "The Quarter of the year, best describes as Q1,Q2,Q3,Q4."
+      "description": "The Quarter of the year, best describes as 1,2,3,4."
     },
     {
       "column_name": "TOTAL_ORDER_AMOUNT",
@@ -27,20 +54,86 @@
       "data_type": "FLOAT",
       "description": "The average amount of sales the customer order for the quarter."
     },
+    {
+      "column_name": "TOTAL_QTY_EACH",
+      "data_type": "NUMBER",
+      "description": "The amount of total quantity the customer order for the quarter."
+          },
+    {
+      "column_name": "AVERAGE_QTY_EACH",
+      "data_type": "FLOAT",
+      "description": "The average amount of quantity the customer order for the quarter."
+    },
 {
       "column_name": "ORDER_FREQUENCY",
       "data_type": "NUMBER",
       "description": "The quantity amount the customer order for the quarter."
     },
-{
-      "column_name": "Categorized",
-      "data_type": "NUMBER",
-      "description": "Best to describe the customer for the quarter.",
-         "data_mapping": {
-    "0": "BELOW ORDER FREQUENCY",
-    "1": "AVERAGE ORDER FREQUENCY WITH AVERAGE SALES",
-    "2": "HIGH SALES WITH HIGH ORDER FREQUENCY"
-  }
+  {
+        "column_name": "INFUSION_COUNT",
+        "data_type": "INTEGER",
+        "description": "The count of ordered infusion-related items."
+    },
+    {
+        "column_name": "INFUSION_SYSTEMS_COUNT",
+        "data_type": "INTEGER",
+        "description": "The count of ordered infusion systems."
+    },
+    {
+        "column_name": "VASCULAR_ACCESS_COUNT",
+        "data_type": "INTEGER",
+        "description": "The count of ordered vascular access systems."
+    },
+    {
+        "column_name": "ONCOLOGY_COUNT",
+        "data_type": "INTEGER",
+        "description": "The count of ordered oncology-related items."
+    },
+    {
+        "column_name": "OTHER_COUNT",
+        "data_type": "INTEGER",
+        "description": "The count of ordered miscellaneous items."
+    },
+    {
+        "column_name": "VETERINARY_COUNT",
+        "data_type": "INTEGER",
+        "description": "The count of ordered veterinary items."
+    },
+    {
+        "column_name": "SERVICE_COUNT",
+        "data_type": "INTEGER",
+        "description": "The count of ordered service-related activities."
+    },
+    {
+        "column_name": "CRITICAL_CARE_COUNT",
+        "data_type": "INTEGER",
+        "description": "The count of ordered critical care-related items."
+    },
+    {
+        "column_name": "RESPIRATORY_COUNT",
+        "data_type": "INTEGER",
+        "description": "The count of ordered respiratory-related items."
+    },
+    {
+        "column_name": "SOLUTIONS_COUNT",
+        "data_type": "INTEGER",
+        "description": "The count of ordered solution-related items."
+    },
+    {
+        "column_name": "NA_COUNT",
+        "data_type": "INTEGER",
+        "description": "The count of ordered uncategorized items."
+    },
+    {
+        "column_name": "Categorized_1_Label",
+        "data_type": "VARCHAR",
+        "description": "The categorized of sales valued customer."
+    },
+    {
+        "column_name": "Categorized_2_Label",
+        "data_type": "VARCHAR",
+        "description": "The categorized of quantity amount valued customer"
     }
+    
   ]
 }

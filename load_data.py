@@ -1,10 +1,5 @@
-import pandas as pd
 from sqlalchemy import create_engine
-import os
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
+import pandas as pd
 
 def clean_column_name(col):
     # Remove leading/trailing spaces and special characters
@@ -37,13 +32,7 @@ def load_customer_data(csv_path):
         )
         
         print(f"Successfully loaded {len(df)} rows into customer_data table")
-        
-        # Verify the data
-        with engine.connect() as conn:
-            result = conn.execute("SELECT COUNT(*) FROM customer_data")
-            count = result.scalar()
-            print(f"Total rows in customer_data table: {count}")
-            
+                    
     except Exception as e:
         print(f"Error loading data: {str(e)}")
         raise

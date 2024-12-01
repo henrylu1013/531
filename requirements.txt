@@ -1,10 +1,15 @@
-flask
+# LLM related
+anthropic
 langchain
 langchain-anthropic
-anthropic
-python-dotenv
-psycopg2-binary
-SQLAlchemy
-Flask-SQLAlchemy
+
+# Flask related
+flask
 Flask-Migrate
+Flask-SQLAlchemy
+psycopg2-binary
+python-dotenv
+SQLAlchemy
+
+# Data related
 pandas 

@@ -17,7 +17,6 @@
 App is built with Flask and Langchain. It uses Anthropic Claude 3.0 sonnet model as the LLM. 
 
 - `app.py` is the main file that runs the flask app.
-- `database_setup.py` is used to create the database schema and get the db client.
 - `Dockerfile` is used to containerize the flask app.
 - `entrypoint.sh` is used to initialize the database and run the flask app.
 - `load_data.py` is used to load the data into the database.
